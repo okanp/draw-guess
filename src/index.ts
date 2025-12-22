@@ -13,6 +13,11 @@ const server = app.listen(port, () => console.log(`http://localhost:${port}`));
 
 const rooms = new Map<string, Room>();
 
+// Health check endpoint
+app.get("/health", (req, res) => {
+    res.status(200).send("OK");
+});
+
 app.get("/api/rooms", (req, res) => {
     const roomList = Array.from(rooms.values()).map(room => room.getInfo());
     res.json(roomList);

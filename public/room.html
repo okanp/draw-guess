@@ -278,7 +278,9 @@
         if (!roomId || (!name && !myPlayerId)) {
             window.location.href = "/index.html";
         } else {
-            const wsUrl = `ws://localhost:3000/${roomId}?${myPlayerId ? `playerId=${myPlayerId}` : `name=${name}&avatar=${avatar}`}`;
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsHost = window.location.host;
+            const wsUrl = `${wsProtocol}//${wsHost}/${roomId}?${myPlayerId ? `playerId=${myPlayerId}` : `name=${name}&avatar=${avatar}`}`;
             const ws = new WebSocket(wsUrl);
 
             const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d");
