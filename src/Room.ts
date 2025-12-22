@@ -1,12 +1,14 @@
 import { WebSocket } from "ws";
 import { v4 as uuidv4 } from "uuid";
+import * as fs from 'fs';
+import * as path from 'path';
 
 interface Player {
     id: string;
     name: string;
     avatar: string;
     score: number;
-    turnScore: number; // Points earned in the current turn
+    turnScore: number;
     ws: WebSocket | null;
     isModerator: boolean;
     reconnectionTimeout?: NodeJS.Timeout;
@@ -21,10 +23,7 @@ export class Room {
     totalRounds = 0;
     currentRound = 0;
 
-    private words = {
-        English: ["apple", "banana", "car", "dog", "cat", "house", "tree", "sun", "moon", "star", "computer", "keyboard"],
-        Turkish: ["elma", "muz", "araba", "köpek", "kedi", "ev", "ağaç", "güneş", "ay", "yıldız", "bilgisayar", "klavye"],
-    };
+    private words: string[];
     private currentWord = "";
     private hintWord = "";
     private revealedIndices = new Set<number>();
@@ -42,6 +41,18 @@ export class Room {
         this.language = language;
         this.turnDuration = turnDuration;
         this.onEmpty = onEmpty;
+
+        try {
+            const fileName = language === 'English' ? 'english.txt' : 'turkish.txt';
+            const filePath = path.join(__dirname, '..', 'public', 'words', fileName);
+            const fileContent = fs.readFileSync(filePath, 'utf-8');
+            this.words = fileContent.split(/\r?\n/).map(word => word.trim()).filter(word => word.length > 0);
+        } catch (error) {
+            console.error(`Error reading word file for ${language}:`, error);
+            this.words = language === 'English' 
+                ? ["apple", "banana", "car", "dog", "cat", "house", "tree", "sun", "moon", "star"]
+                : ["elma", "muz", "araba", "köpek", "kedi", "ev", "ağaç", "güneş", "ay", "yıldız"];
+        }
     }
 
     addPlayer(ws: WebSocket, name: string, avatar: string): Player {
@@ -240,8 +251,7 @@ export class Room {
         const nextDrawer = activePlayers[(currentIndex + 1) % activePlayers.length];
         this.drawingPlayerId = nextDrawer.id;
 
-        const wordList = this.words[this.language];
-        this.currentWord = wordList[Math.floor(Math.random() * wordList.length)];
+        this.currentWord = this.words[Math.floor(Math.random() * this.words.length)];
         this.revealedIndices.clear();
         this.hintWord = this.currentWord.replace(/[a-zA-Z]/g, "_");
 
@@ -306,10 +316,7 @@ export class Room {
         this.broadcastGameState();
         
         const finalScores = this.getPlayersInfo().sort((a, b) => b.score - a.score);
-        const restartDelay = 10;
-        this.broadcast({ type: "GAME_OVER", payload: { reason, finalScores, restartDelay } });
-
-        this.turnTimeout = setTimeout(() => this.restartGame(), restartDelay * 1000);
+        this.broadcast({ type: "GAME_OVER", payload: { reason, finalScores } });
     }
 
     private clearAllTimers() {

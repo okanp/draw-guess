@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Draw and Guess - Lobby</title>
+    <title>Draw and Guess - Admin Lobby</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
 
@@ -15,6 +15,8 @@
             --border-color: #e0e0e0;
             --accent-color: #4a90e2;
             --accent-hover: #357abd;
+            --danger-color: #e74c3c;
+            --danger-hover: #c0392b;
         }
 
         body {
@@ -70,6 +72,27 @@
         .room-item:hover {
             background-color: #f0f0f0;
         }
+        
+        .room-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .delete-btn {
+            font-family: 'Poppins', sans-serif;
+            font-size: 0.9em;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: none;
+            background-color: var(--danger-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .delete-btn:hover {
+            background-color: var(--danger-hover);
+        }
 
         .create-room-form {
             display: flex;
@@ -102,7 +125,7 @@
 </head>
 <body>
     <div class="lobby-container">
-        <h1>Lobby</h1>
+        <h1>Admin Lobby</h1>
         <h2>Available Rooms</h2>
         <div id="room-list"></div>
         <h2>Create a New Room</h2>
@@ -133,7 +156,7 @@
                 const rooms = await response.json();
                 roomList.innerHTML = "";
                 if (rooms.length === 0) {
-                    roomList.innerHTML = "<p>No available rooms. Create one!</p>";
+                    roomList.innerHTML = "<p>No available rooms.</p>";
                 } else {
                     rooms.forEach(room => {
                         const roomDiv = document.createElement("div");
@@ -142,17 +165,40 @@
                         const link = document.createElement("a");
                         link.href = `/room.html?id=${room.id}`;
                         link.textContent = `Room #${room.id.substring(0, 8)}`;
+                        link.target = "_blank"; // Open in new tab
 
                         const details = document.createElement("span");
                         details.textContent = `(${room.language}, ${room.turnDuration}s) - ${room.playerCount} players`;
 
+                        const deleteBtn = document.createElement("button");
+                        deleteBtn.className = "delete-btn";
+                        deleteBtn.textContent = "Delete";
+                        deleteBtn.onclick = () => deleteRoom(room.id);
+
+                        const actionsDiv = document.createElement("div");
+                        actionsDiv.className = "room-actions";
+                        actionsDiv.appendChild(details);
+                        actionsDiv.appendChild(deleteBtn);
+
                         roomDiv.appendChild(link);
-                        roomDiv.appendChild(details);
+                        roomDiv.appendChild(actionsDiv);
                         roomList.appendChild(roomDiv);
                     });
                 }
             } catch (error) {
                 roomList.innerHTML = "<p>Error fetching rooms. The server might be offline.</p>";
+            }
+        }
+
+        async function deleteRoom(roomId) {
+            if (!confirm(`Are you sure you want to delete room ${roomId.substring(0, 8)}?`)) {
+                return;
+            }
+            try {
+                await fetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
+                fetchRooms(); // Refresh the list
+            } catch (error) {
+                alert("Failed to delete room.");
             }
         }
 
@@ -166,7 +212,7 @@
                     body: JSON.stringify({ language, turnDuration }),
                 });
                 const room = await response.json();
-                window.location.href = `/room.html?id=${room.id}`;
+                fetchRooms(); // Refresh list after creating
             }
         });
 

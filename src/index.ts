@@ -41,6 +41,23 @@ app.post("/api/rooms", (req, res) => {
     res.json(room.getInfo());
 });
 
+app.delete("/api/rooms/:roomId", (req, res) => {
+    const { roomId } = req.params;
+    const room = rooms.get(roomId);
+
+    if (room) {
+        // Gracefully disconnect all players
+        room.getActivePlayers().forEach(player => {
+            player.ws?.close(1000, "Room closed by administrator.");
+        });
+        rooms.delete(roomId);
+        console.log(`Room ${roomId} deleted by administrator.`);
+        res.status(200).send({ message: "Room deleted successfully." });
+    } else {
+        res.status(404).send({ message: "Room not found." });
+    }
+});
+
 app.post("/api/find-room", (req, res) => {
     const { language } = req.body;
     
