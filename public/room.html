@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw and Guess</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+        :root {
+            --background-color: #f4f4f9;
+            --container-bg: #ffffff;
+            --primary-text: #333;
+            --secondary-text: #777;
+            --border-color: #e0e0e0;
+            --accent-color: #4a90e2;
+            --accent-hover: #357abd;
+            --error-color: #e9426c;
+            --system-color: #8e44ad;
+            --correct-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --danger-hover: #c0392b;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--primary-text);
+        }
+
+        .top-bar {
+            padding: 12px 20px;
+            text-align: center;
+            background-color: var(--container-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1em;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .top-bar-buttons {
+            position: absolute;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        #start-game-btn, #leave-room-btn {
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #start-game-btn { background-color: var(--accent-color); }
+        #start-game-btn:hover { background-color: var(--accent-hover); }
+        #start-game-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+
+        #leave-room-btn { background-color: var(--danger-color); }
+        #leave-room-btn:hover { background-color: var(--danger-hover); }
+
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 15px;
+            gap: 15px;
+        }
+
+        #players, #chat-container {
+            width: 250px;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        #players h2 {
+            margin: 0;
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1.2em;
+        }
+
+        #player-list { overflow-y: auto; padding: 10px; }
+        
+        .player {
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.3s;
+        }
+        .player-info { display: flex; align-items: center; gap: 10px; }
+        .player-avatar { 
+            width: 32px; 
+            height: 32px; 
+            border-radius: 50%;
+        }
+        .player.has-guessed { background-color: #e8f5e9; }
+        .player.disconnected { opacity: 0.6; }
+        .player-name { font-weight: 600; }
+        .player-score { font-weight: 600; color: var(--accent-color); }
+        .player-tag { font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px; margin-left: 5px; }
+
+        #canvas-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #hint-bar {
+            text-align: center;
+            font-size: 1.8em;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            padding: 15px;
+            background: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            color: var(--primary-text);
+            min-height: 1.5em;
+        }
+        #hint-bar.your-word {
+            color: var(--accent-color);
+            letter-spacing: 0.1em;
+        }
+
+        #canvas-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        #canvas { 
+            border: 1px solid var(--border-color); 
+            cursor: crosshair; 
+            border-radius: 8px;
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        #chat-container { width: 320px; }
+        #chat { flex: 1; overflow-y: scroll; padding: 10px; }
+        #chat p { margin: 0 0 10px; line-height: 1.4; }
+        #chat p .name { font-weight: 600; }
+        #chat p .system { color: var(--system-color); font-style: italic; }
+        #chat p .correct { color: var(--correct-color); font-weight: 600; }
+
+        #chat-input {
+            border: none;
+            border-top: 1px solid var(--border-color);
+            padding: 15px;
+            font-size: 1em;
+            font-family: 'Poppins', sans-serif;
+        }
+        #chat-input:disabled { background: #f9f9f9; cursor: not-allowed; }
+        #chat-input:focus { outline: none; }
+
+        #timer { font-weight: bold; margin-left: 20px; color: var(--error-color); }
+
+        #summary-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .summary-box {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            text-align: center;
+            width: 90%;
+            max-width: 500px;
+        }
+        .summary-box h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .summary-box h2 { font-size: 1.5em; color: var(--secondary-text); margin-bottom: 30px; }
+        .summary-scores { list-style: none; padding: 0; }
+        .summary-scores li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 1.2em;
+        }
+        .summary-scores li:last-child { border-bottom: none; }
+        .summary-scores .score { font-weight: 700; color: var(--accent-color); }
+        #restart-timer { margin-top: 20px; font-size: 1.1em; color: var(--secondary-text); }
+
+        @media (max-width: 800px) {
+            body { height: auto; }
+            .main-content { flex-direction: column; padding: 10px; gap: 10px; overflow-y: auto; }
+            #players, #chat-container, #canvas-area { width: 100%; max-width: 100%; box-sizing: border-box; }
+            #players, #chat-container { height: 250px; }
+            #canvas-area { order: -1; }
+            #chat-container { order: 0; }
+            #players { order: 1; }
+            #canvas { width: 100%; height: auto; }
+            .top-bar { font-size: 0.9em; }
+            .top-bar-buttons { gap: 5px; }
+            #start-game-btn, #leave-room-btn { padding: 6px 10px; font-size: 12px; }
+            #hint-bar { font-size: 1.2em; padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <span id="game-state-msg">Waiting for players...</span>
+        <span id="timer"></span>
+        <div class="top-bar-buttons">
+            <button id="start-game-btn" style="display:none;">Start Game</button>
+            <button id="leave-room-btn">Leave Room</button>
+        </div>
+    </div>
+    <div class="main-content">
+        <div id="players">
+            <h2>Players</h2>
+            <div id="player-list"></div>
+        </div>
+        <div id="canvas-area">
+            <div id="hint-bar"></div>
+            <div id="canvas-container"><canvas id="canvas" width="800" height="550"></canvas></div>
+        </div>
+        <div id="chat-container">
+            <div id="chat"></div>
+            <input id="chat-input" type="text" placeholder="Type your guess..." />
+        </div>
+    </div>
+
+    <div id="summary-overlay">
+        <div class="summary-box">
+            <h1 id="summary-title"></h1>
+            <h2 id="summary-subtitle"></h2>
+            <ul id="summary-scores" class="summary-scores"></ul>
+            <div id="restart-timer"></div>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get("id");
+        const sessionKey = `draw-guess-session-${roomId}`;
+
+        let name = sessionStorage.getItem("playerName");
+        let avatar = sessionStorage.getItem("playerAvatar");
+        let myPlayerId = sessionStorage.getItem(sessionKey);
+
+        if (!roomId || (!name && !myPlayerId)) {
+            window.location.href = "/index.html";
+        } else {
+            const wsUrl = `ws://localhost:3000/${roomId}?${myPlayerId ? `playerId=${myPlayerId}` : `name=${name}&avatar=${avatar}`}`;
+            const ws = new WebSocket(wsUrl);
+
+            const canvas = document.getElementById("canvas"), ctx = canvas.getContext("2d");
+            const chat = document.getElementById("chat"), chatInput = document.getElementById("chat-input");
+            const playerListDiv = document.getElementById("player-list");
+            const startGameBtn = document.getElementById("start-game-btn");
+            const leaveRoomBtn = document.getElementById("leave-room-btn");
+            const gameStateMsg = document.getElementById("game-state-msg");
+            const timerSpan = document.getElementById("timer");
+            const hintBar = document.getElementById("hint-bar");
+            const summaryOverlay = document.getElementById("summary-overlay");
+            const summaryTitle = document.getElementById("summary-title");
+            const summarySubtitle = document.getElementById("summary-subtitle");
+            const summaryScores = document.getElementById("summary-scores");
+            const restartTimerDiv = document.getElementById("restart-timer");
+
+            const messageSound = new Audio('/sound/message.mp3');
+            const correctSound = new Audio('/sound/correct.mp3');
+            const tickSound = new Audio('/sound/tick-tock.mp3');
+            const doorSound = new Audio('/sound/door.mp3');
+            const winSound = new Audio('/sound/win.mp3');
+            tickSound.loop = true;
+
+            let drawing = false, myTurn = false, isModerator = false;
+            let restartInterval;
+
+            startGameBtn.addEventListener("click", () => ws.send(JSON.stringify({ type: "START_GAME" })));
+            leaveRoomBtn.addEventListener("click", () => {
+                sessionStorage.removeItem(sessionKey);
+                sessionStorage.removeItem("playerName");
+                sessionStorage.removeItem("playerAvatar");
+                window.location.href = "/index.html";
+            });
+
+            canvas.addEventListener("mousedown", (e) => { if (myTurn) { drawing = true; ctx.beginPath(); ctx.moveTo(e.offsetX, e.offsetY); } });
+            canvas.addEventListener("mouseup", () => { if (myTurn) drawing = false; });
+            canvas.addEventListener("mouseout", () => { if (myTurn) drawing = false; });
+            canvas.addEventListener("mousemove", (e) => {
+                if (myTurn && drawing) {
+                    const data = { x: e.offsetX, y: e.offsetY };
+                    ws.send(JSON.stringify({ type: "DRAW", payload: data }));
+                    ctx.lineWidth = 3; ctx.lineCap = "round";
+                    ctx.lineTo(data.x, data.y); ctx.stroke();
+                }
+            });
+            chatInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && chatInput.value) {
+                    ws.send(JSON.stringify({ type: "CHAT", payload: chatInput.value }));
+                    chatInput.value = "";
+                }
+            });
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                switch (data.type) {
+                    case "CONNECT_SUCCESS":
+                        myPlayerId = data.payload.playerId;
+                        sessionStorage.setItem(sessionKey, myPlayerId);
+                        isModerator = data.payload.isModerator;
+                        if (isModerator) startGameBtn.style.display = "inline-block";
+                        doorSound.play();
+                        break;
+                    case "RECONNECT_SUCCESS":
+                        isModerator = data.payload.isModerator;
+                        if (isModerator) startGameBtn.style.display = "inline-block";
+                        addChatMessage({ name: "System", message: "You have reconnected." });
+                        updatePlayerList(data.payload.players);
+                        doorSound.play();
+                        break;
+                    case "SET_MODERATOR":
+                        isModerator = data.payload.isModerator;
+                        if (isModerator) {
+                            startGameBtn.style.display = "inline-block";
+                            addChatMessage({ name: "System", message: "You are now the moderator." });
+                        }
+                        break;
+
+                    case "GAME_STATE_UPDATE":
+                        const { gameState, playerCount, currentRound, totalRounds, drawerName } = data.payload;
+                        if (gameState === 'playing') {
+                            gameStateMsg.textContent = `Round ${currentRound}/${totalRounds} - ${drawerName} is drawing`;
+                            tickSound.play();
+                        } else if (gameState === 'turn_summary') {
+                            gameStateMsg.textContent = `Round ${currentRound}/${totalRounds} - Summary`;
+                            tickSound.pause(); tickSound.currentTime = 0;
+                        } else if (gameState === 'game_over') {
+                            gameStateMsg.textContent = "Game Over!";
+                            tickSound.pause(); tickSound.currentTime = 0;
+                        } else if (gameState === 'between_turns') {
+                            gameStateMsg.textContent = `Round ${currentRound}/${totalRounds}`;
+                            tickSound.pause(); tickSound.currentTime = 0;
+                        } else {
+                            gameStateMsg.textContent = `Waiting for players... (${playerCount} joined)`;
+                            timerSpan.textContent = ""; hintBar.textContent = "";
+                        }
+                        if (gameState !== 'turn_summary' && gameState !== 'game_over') {
+                            summaryOverlay.style.display = 'none';
+                            if(restartInterval) clearInterval(restartInterval);
+                        }
+                        startGameBtn.style.display = (isModerator && gameState === 'waiting') ? 'inline-block' : 'none';
+                        startGameBtn.disabled = !(isModerator && gameState === 'waiting' && playerCount >= 2);
+                        break;
+                    
+                    case "TURN_PREVIEW":
+                        myTurn = false;
+                        chatInput.disabled = false;
+                        hintBar.classList.remove("your-word");
+                        hintBar.textContent = "";
+                        gameStateMsg.textContent = `Get ready! ${data.payload.drawerName} is drawing next.`;
+                        let countdown = data.payload.duration;
+                        timerSpan.textContent = `Starting in ${countdown}...`;
+                        const previewInterval = setInterval(() => {
+                            countdown--;
+                            timerSpan.textContent = `Starting in ${countdown}...`;
+                            if (countdown <= 0) clearInterval(previewInterval);
+                        }, 1000);
+                        break;
+
+                    case "TIMER_TICK":
+                        timerSpan.textContent = `Time: ${data.payload.timeLeft}s`;
+                        break;
+                    
+                    case "HINT_REVEALED":
+                        if (!myTurn) {
+                            hintBar.textContent = data.payload.hint.split("").join(" ");
+                        }
+                        break;
+
+                    case "UPDATE_PLAYER_LIST":
+                        updatePlayerList(data.payload.players);
+                        break;
+                    case "PLAYER_LEFT":
+                        addChatMessage({ name: "System", message: `${data.payload.name} has left the game.` });
+                        doorSound.play();
+                        break;
+                    case "CHAT":
+                        addChatMessage(data.payload);
+                        if (data.payload.name !== "System") messageSound.play();
+                        break;
+                    case "DRAW":
+                        ctx.lineWidth = 3; ctx.lineCap = "round";
+                        ctx.lineTo(data.payload.x, data.payload.y); ctx.stroke();
+                        break;
+                    case "YOUR_TURN":
+                        myTurn = true;
+                        chatInput.disabled = true;
+                        hintBar.textContent = data.payload.word;
+                        hintBar.classList.add("your-word");
+                        addChatMessage({ name: "System", message: "Your turn to draw!" });
+                        break;
+                    case "CORRECT_GUESS":
+                        addChatMessage({ name: "System", message: `${data.payload.name} guessed the word!`, type: 'correct' });
+                        correctSound.play();
+                        if (data.payload.myId === myPlayerId) {
+                            chatInput.disabled = true;
+                        }
+                        break;
+                    case "CLEAR_BOARD":
+                        ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath();
+                        break;
+                    case "GAME_STARTED":
+                        addChatMessage({ name: "System", message: "The game has started!" });
+                        startGameBtn.style.display = "none";
+                        break;
+                    
+                    case "TURN_SUMMARY":
+                        summaryTitle.textContent = "Turn Over!";
+                        summarySubtitle.textContent = `The word was: ${data.payload.word}`;
+                        summaryScores.innerHTML = data.payload.scores
+                            .map(p => `<li><span>${p.name}</span><span class="score">+${p.turnScore}</span></li>`)
+                            .join("");
+                        restartTimerDiv.innerHTML = "";
+                        summaryOverlay.style.display = "flex";
+                        break;
+
+                    case "GAME_OVER":
+                        const winner = data.payload.finalScores[0];
+                        summaryTitle.textContent = winner ? `${winner.name} wins!` : "Game Over!";
+                        summarySubtitle.textContent = data.payload.reason;
+                        summaryScores.innerHTML = data.payload.finalScores
+                            .map((p, i) => `<li><div class="player-info"><img class="player-avatar" src="/image/avatar/${p.avatar}.jpg"><span>${i + 1}. ${p.name}</span></div><span class="score">${p.score}</span></li>`)
+                            .join("");
+                        
+                        let restartTime = data.payload.restartDelay;
+                        restartTimerDiv.textContent = `New game starting in ${restartTime}...`;
+                        if(restartInterval) clearInterval(restartInterval);
+                        restartInterval = setInterval(() => {
+                            restartTime--;
+                            restartTimerDiv.textContent = `New game starting in ${restartTime}...`;
+                            if (restartTime <= 0) clearInterval(restartInterval);
+                        }, 1000);
+
+                        summaryOverlay.style.display = "flex";
+                        winSound.play();
+                        myTurn = false;
+                        chatInput.disabled = false;
+                        timerSpan.textContent = "";
+                        hintBar.textContent = "";
+                        hintBar.classList.remove("your-word");
+                        break;
+
+                    case "ERROR":
+                        alert(`Error: ${data.payload}`);
+                        break;
+                }
+            };
+
+            ws.onclose = () => addChatMessage({ name: "System", message: "Connection lost. Refresh to reconnect." });
+
+            function addChatMessage(payload) {
+                const p = document.createElement("p");
+                if (payload.name === "System") {
+                    p.innerHTML = `<span class="system">${payload.type === 'correct' ? '✅' : 'ℹ️'} ${payload.message}</span>`;
+                } else {
+                    p.innerHTML = `<span class="name">${payload.name}:</span> ${payload.message}`;
+                }
+                chat.appendChild(p);
+                chat.scrollTop = chat.scrollHeight;
+            }
+
+            function updatePlayerList(players) {
+                players.sort((a, b) => b.score - a.score);
+                playerListDiv.innerHTML = "";
+                players.forEach(player => {
+                    const p = document.createElement("div");
+                    p.className = "player";
+                    if (!player.isConnected) p.classList.add("disconnected");
+
+                    const infoDiv = document.createElement("div");
+                    infoDiv.className = "player-info";
+                    
+                    const avatarImg = document.createElement("img");
+                    avatarImg.src = `/image/avatar/${player.avatar}.jpg`;
+                    avatarImg.className = "player-avatar";
+
+                    const nameSpan = document.createElement("span");
+                    nameSpan.className = "player-name";
+                    nameSpan.textContent = player.name;
+
+                    if (player.isModerator) {
+                        const tag = document.createElement("span");
+                        tag.className = "player-tag";
+                        tag.textContent = "Mod";
+                        nameSpan.appendChild(tag);
+                    }
+
+                    infoDiv.appendChild(avatarImg);
+                    infoDiv.appendChild(nameSpan);
+
+                    const scoreSpan = document.createElement("span");
+                    scoreSpan.className = "player-score";
+                    scoreSpan.textContent = player.score;
+
+                    p.appendChild(infoDiv);
+                    p.appendChild(scoreSpan);
+                    playerListDiv.appendChild(p);
+                });
+            }
+        }
+    </script>
+</body>
+</html>

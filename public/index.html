@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw and Guess - Welcome</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        :root {
+            --background-color: #f4f4f9;
+            --container-bg: #ffffff;
+            --primary-text: #333;
+            --secondary-text: #777;
+            --border-color: #e0e0e0;
+            --accent-color: #4a90e2;
+            --accent-hover: #357abd;
+        }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--primary-text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .welcome-container {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--container-bg);
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            padding: 40px;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        .avatar-selector {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+        .avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 4px solid transparent;
+            transition: border-color 0.2s;
+            justify-self: center;
+        }
+        .avatar.selected {
+            border-color: var(--accent-color);
+        }
+
+        #action-button {
+            width: 100%;
+            padding: 15px;
+            font-size: 1.2em;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            background-color: var(--accent-color);
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        #action-button:hover {
+            background-color: var(--accent-hover);
+        }
+        #join-note {
+            margin-top: 15px;
+            color: var(--secondary-text);
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome-container">
+        <h1>Draw & Guess</h1>
+        <div class="input-group">
+            <label for="name-input">Your Name</label>
+            <input type="text" id="name-input" placeholder="Enter your name">
+        </div>
+        <div class="input-group">
+            <label>Choose Your Avatar</label>
+            <div class="avatar-selector">
+                <img src="/image/avatar/1.jpg" class="avatar selected" data-avatar="1">
+                <img src="/image/avatar/2.jpg" class="avatar" data-avatar="2">
+                <img src="/image/avatar/3.jpg" class="avatar" data-avatar="3">
+                <img src="/image/avatar/4.jpg" class="avatar" data-avatar="4">
+                <img src="/image/avatar/5.jpg" class="avatar" data-avatar="5">
+                <img src="/image/avatar/6.jpg" class="avatar" data-avatar="6">
+                <img src="/image/avatar/7.jpg" class="avatar" data-avatar="7">
+                <img src="/image/avatar/8.jpg" class="avatar" data-avatar="8">
+                <img src="/image/avatar/9.jpg" class="avatar" data-avatar="9">
+                <img src="/image/avatar/10.jpg" class="avatar" data-avatar="10">
+                <img src="/image/avatar/11.jpg" class="avatar" data-avatar="11">
+                <img src="/image/avatar/12.jpg" class="avatar" data-avatar="12">
+                <img src="/image/avatar/13.jpg" class="avatar" data-avatar="13">
+                <img src="/image/avatar/14.jpg" class="avatar" data-avatar="14">
+                <img src="/image/avatar/15.jpg" class="avatar" data-avatar="15">
+                <img src="/image/avatar/16.jpg" class="avatar" data-avatar="16">
+            </div>
+        </div>
+        <div class="input-group">
+            <label for="language-select">Language</label>
+            <select id="language-select">
+                <option value="English">English</option>
+                <option value="Turkish">Turkish</option>
+            </select>
+        </div>
+        <button id="action-button">Find Match</button>
+        <p id="join-note" style="display: none;"></p>
+    </div>
+
+    <script>
+        const nameInput = document.getElementById('name-input');
+        const languageSelect = document.getElementById('language-select');
+        const avatars = document.querySelectorAll('.avatar');
+        const actionButton = document.getElementById('action-button');
+        const joinNote = document.getElementById('join-note');
+
+        let selectedAvatar = '1';
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomIdFromUrl = urlParams.get('roomId');
+
+        if (roomIdFromUrl) {
+            actionButton.textContent = 'Join Room';
+            joinNote.textContent = `You are joining a specific room.`;
+            joinNote.style.display = 'block';
+        }
+
+        avatars.forEach(avatar => {
+            avatar.addEventListener('click', () => {
+                avatars.forEach(a => a.classList.remove('selected'));
+                avatar.classList.add('selected');
+                selectedAvatar = avatar.dataset.avatar;
+            });
+        });
+
+        actionButton.addEventListener('click', async () => {
+            const name = nameInput.value.trim();
+            if (!name) {
+                alert('Please enter your name!');
+                return;
+            }
+
+            sessionStorage.setItem('playerName', name);
+            sessionStorage.setItem('playerAvatar', selectedAvatar);
+
+            if (roomIdFromUrl) {
+                window.location.href = `/room.html?id=${roomIdFromUrl}`;
+            } else {
+                const language = languageSelect.value;
+                try {
+                    const response = await fetch('/api/find-room', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ language }),
+                    });
+                    const data = await response.json();
+                    if (data.roomId) {
+                        window.location.href = `/room.html?id=${data.roomId}`;
+                    } else {
+                        alert('Could not find or create a room. Please try again.');
+                    }
+                } catch (error) {
+                    alert('Error connecting to the server. Please try again later.');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

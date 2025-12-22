@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: draw-guess
+    env: node
+    plan: free
+    buildCommand: "npm install && npm run build"
+    startCommand: "npm start"
+    healthCheckPath: /lobby.html
+    envVars:
+      - key: NODE_ENV
+        value: production

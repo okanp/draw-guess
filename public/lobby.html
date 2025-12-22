@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Draw and Guess - Lobby</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+        :root {
+            --background-color: #f4f4f9;
+            --container-bg: #ffffff;
+            --primary-text: #333;
+            --secondary-text: #777;
+            --border-color: #e0e0e0;
+            --accent-color: #4a90e2;
+            --accent-hover: #357abd;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--background-color);
+            color: var(--primary-text);
+            margin: 0;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .lobby-container {
+            width: 100%;
+            max-width: 800px;
+            background-color: var(--container-bg);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            padding: 30px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: var(--primary-text);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+
+        #room-list {
+            margin-bottom: 30px;
+        }
+
+        .room-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+            transition: background-color 0.2s;
+        }
+        
+        .room-item a {
+            text-decoration: none;
+            color: var(--accent-color);
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .room-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        .create-room-form {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        select, button {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1em;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        #create-room-btn {
+            flex-grow: 1;
+            border: none;
+            background-color: var(--accent-color);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        #create-room-btn:hover {
+            background-color: var(--accent-hover);
+        }
+    </style>
+</head>
+<body>
+    <div class="lobby-container">
+        <h1>Lobby</h1>
+        <h2>Available Rooms</h2>
+        <div id="room-list"></div>
+        <h2>Create a New Room</h2>
+        <div class="create-room-form">
+            <select id="language-select">
+                <option value="English">English</option>
+                <option value="Turkish">Turkish</option>
+            </select>
+            <select id="duration-select">
+                <option value="30">30 Seconds</option>
+                <option value="60">60 Seconds</option>
+                <option value="90">90 Seconds</option>
+                <option value="120">120 Seconds</option>
+            </select>
+            <button id="create-room-btn">Create Room</button>
+        </div>
+    </div>
+
+    <script>
+        const roomList = document.getElementById("room-list");
+        const languageSelect = document.getElementById("language-select");
+        const durationSelect = document.getElementById("duration-select");
+        const createRoomBtn = document.getElementById("create-room-btn");
+
+        async function fetchRooms() {
+            try {
+                const response = await fetch("/api/rooms");
+                const rooms = await response.json();
+                roomList.innerHTML = "";
+                if (rooms.length === 0) {
+                    roomList.innerHTML = "<p>No available rooms. Create one!</p>";
+                } else {
+                    rooms.forEach(room => {
+                        const roomDiv = document.createElement("div");
+                        roomDiv.className = "room-item";
+                        
+                        const link = document.createElement("a");
+                        link.href = `/room.html?id=${room.id}`;
+                        link.textContent = `Room #${room.id.substring(0, 8)}`;
+
+                        const details = document.createElement("span");
+                        details.textContent = `(${room.language}, ${room.turnDuration}s) - ${room.playerCount} players`;
+
+                        roomDiv.appendChild(link);
+                        roomDiv.appendChild(details);
+                        roomList.appendChild(roomDiv);
+                    });
+                }
+            } catch (error) {
+                roomList.innerHTML = "<p>Error fetching rooms. The server might be offline.</p>";
+            }
+        }
+
+        createRoomBtn.addEventListener("click", async () => {
+            const language = languageSelect.value;
+            const turnDuration = parseInt(durationSelect.value, 10);
+            if (language && turnDuration) {
+                const response = await fetch("/api/rooms", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ language, turnDuration }),
+                });
+                const room = await response.json();
+                window.location.href = `/room.html?id=${room.id}`;
+            }
+        });
+
+        fetchRooms();
+        setInterval(fetchRooms, 5000);
+    </script>
+</body>
+</html>
