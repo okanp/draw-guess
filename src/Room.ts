@@ -173,6 +173,9 @@ export class Room {
             case "DRAW":
                 if (playerId === this.drawingPlayerId) this.handleDraw(data.payload, ws);
                 break;
+            case "CLEAR_BOARD":
+                if (playerId === this.drawingPlayerId) this.broadcast({ type: "CLEAR_BOARD" });
+                break;
         }
     }
 

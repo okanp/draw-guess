@@ -20,13 +20,18 @@
             --correct-color: #2ecc71;
             --danger-color: #e74c3c;
             --danger-hover: #c0392b;
+            --viewport-height: 100vh;
+        }
+
+        html, body {
+            overscroll-behavior: none;
         }
 
         body {
             font-family: 'Poppins', sans-serif;
             display: flex;
             flex-direction: column;
-            height: 100vh;
+            height: var(--viewport-height);
             margin: 0;
             background-color: var(--background-color);
             color: var(--primary-text);
@@ -45,6 +50,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             position: relative;
             z-index: 10;
+            flex-shrink: 0;
         }
         
         .top-bar-buttons {
@@ -90,6 +96,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            flex-shrink: 0;
         }
         
         #players h2 {
@@ -127,6 +134,7 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            min-height: 0;
         }
         #hint-bar {
             text-align: center;
@@ -139,6 +147,7 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             color: var(--primary-text);
             min-height: 1.5em;
+            flex-shrink: 0;
         }
         #hint-bar.your-word {
             color: var(--accent-color);
@@ -154,6 +163,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             position: relative;
+            min-height: 0;
         }
         #canvas { 
             border: 1px solid var(--border-color); 
@@ -161,6 +171,7 @@
             border-radius: 8px;
             max-width: 100%;
             max-height: 100%;
+            object-fit: contain;
         }
         
         #tools-container {
@@ -207,7 +218,7 @@
             border-color: var(--accent-color);
         }
         
-        #eraser-btn {
+        #eraser-btn, #clear-btn {
             padding: 8px 12px;
             border-radius: 6px;
             border: 1px solid var(--border-color);
@@ -276,14 +287,35 @@
         #restart-timer { margin-top: 20px; font-size: 1.1em; color: var(--secondary-text); }
 
         @media (max-width: 800px) {
-            body { height: auto; }
-            .main-content { flex-direction: column; padding: 10px; gap: 10px; overflow-y: auto; }
-            #players, #chat-container, #canvas-area { width: 100%; max-width: 100%; box-sizing: border-box; }
-            #players, #chat-container { height: 250px; }
-            #canvas-area { order: -1; }
-            #chat-container { order: 0; }
-            #players { order: 1; }
-            #canvas { width: 100%; height: auto; }
+            .main-content { 
+                flex-direction: column; 
+                padding: 10px; 
+                gap: 10px; 
+            }
+            #players, #chat-container, #canvas-area { 
+                width: 100%; 
+                max-width: 100%; 
+                box-sizing: border-box; 
+            }
+            #players { 
+                order: 1; 
+                flex-basis: 120px; /* Smaller, fixed size */
+                flex-grow: 0;
+                flex-shrink: 0;
+            }
+            #canvas-area { 
+                order: -1; 
+                min-height: 100px; /* Ensure canvas area doesn't disappear */
+            }
+            #chat-container { 
+                order: 0; 
+                flex-shrink: 1; /* Allow chat to shrink */
+                min-height: 50px; /* Height of the input box */
+            }
+            #canvas { 
+                width: 100%; 
+                height: 100%; 
+            }
             .top-bar { font-size: 0.9em; }
             .top-bar-buttons { gap: 5px; }
             #start-game-btn, #leave-room-btn { padding: 6px 10px; font-size: 12px; }
@@ -328,6 +360,7 @@
                     </div>
                     <div class="tool-section">
                         <button id="eraser-btn">Eraser</button>
+                        <button id="clear-btn">Clear</button>
                     </div>
                 </div>
             </div>
@@ -348,6 +381,18 @@
     </div>
 
     <script>
+        // Keyboard-aware viewport height
+        function setViewportHeight() {
+            if (window.visualViewport) {
+                document.documentElement.style.setProperty('--viewport-height', `${window.visualViewport.height}px`);
+            }
+        }
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', setViewportHeight);
+        }
+        setViewportHeight();
+
+
         const urlParams = new URLSearchParams(window.location.search);
         const roomId = urlParams.get("id");
         const sessionKey = `draw-guess-session-${roomId}`;
@@ -384,6 +429,7 @@
             const colorSwatches = document.querySelectorAll('.color-swatch');
             const brushSizes = document.querySelectorAll('.brush-size');
             const eraserBtn = document.getElementById('eraser-btn');
+            const clearBtn = document.getElementById('clear-btn');
 
             const messageSound = new Audio('/sound/message.mp3');
             const correctSound = new Audio('/sound/correct.mp3');
@@ -505,6 +551,12 @@
                 colorSwatches.forEach(s => s.classList.remove('selected'));
                 eraserBtn.classList.add('selected');
                 currentColor = 'white'; // Eraser is just drawing in white
+            });
+
+            clearBtn.addEventListener('click', () => {
+                if (myTurn) {
+                    ws.send(JSON.stringify({ type: "CLEAR_BOARD" }));
+                }
             });
 
             ws.onmessage = (event) => {
