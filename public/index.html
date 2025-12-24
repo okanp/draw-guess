@@ -145,6 +145,26 @@
 
         let selectedAvatar = '1';
 
+        // Load saved preferences
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedName = localStorage.getItem('playerName');
+            const savedAvatar = localStorage.getItem('playerAvatar');
+            const savedLanguage = localStorage.getItem('playerLanguage');
+
+            if (savedName) {
+                nameInput.value = savedName;
+            }
+            if (savedLanguage) {
+                languageSelect.value = savedLanguage;
+            }
+            if (savedAvatar) {
+                selectedAvatar = savedAvatar;
+                avatars.forEach(a => {
+                    a.classList.toggle('selected', a.dataset.avatar === savedAvatar);
+                });
+            }
+        });
+
         const urlParams = new URLSearchParams(window.location.search);
         const roomIdFromUrl = urlParams.get('roomId');
 
@@ -164,18 +184,24 @@
 
         actionButton.addEventListener('click', async () => {
             const name = nameInput.value.trim();
+            const language = languageSelect.value;
             if (!name) {
                 alert('Please enter your name!');
                 return;
             }
 
+            // Save preferences
+            localStorage.setItem('playerName', name);
+            localStorage.setItem('playerAvatar', selectedAvatar);
+            localStorage.setItem('playerLanguage', language);
+
+            // Store in session for this game
             sessionStorage.setItem('playerName', name);
             sessionStorage.setItem('playerAvatar', selectedAvatar);
 
             if (roomIdFromUrl) {
                 window.location.href = `/room.html?id=${roomIdFromUrl}`;
             } else {
-                const language = languageSelect.value;
                 try {
                     const response = await fetch('/api/find-room', {
                         method: 'POST',
