@@ -404,24 +404,44 @@
                 window.location.href = "/index.html";
             });
 
-            function startDrawing(x, y) {
+            function getEventCoordinates(event) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+
+                let clientX, clientY;
+                if (event.touches && event.touches.length > 0) {
+                    clientX = event.touches[0].clientX;
+                    clientY = event.touches[0].clientY;
+                } else {
+                    clientX = event.clientX;
+                    clientY = event.clientY;
+                }
+
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
+
+            function startDrawing(coords) {
                 drawing = true;
-                const data = { x, y, color: currentColor, size: currentSize, start: true };
+                const data = { x: coords.x, y: coords.y, color: currentColor, size: currentSize, start: true };
                 ws.send(JSON.stringify({ type: "DRAW", payload: data }));
                 
                 ctx.beginPath();
                 ctx.strokeStyle = currentColor;
                 ctx.lineWidth = currentSize;
                 ctx.lineCap = "round";
-                ctx.moveTo(x, y);
+                ctx.moveTo(coords.x, coords.y);
             }
 
-            function draw(x, y) {
+            function draw(coords) {
                 if (!drawing) return;
-                const data = { x, y, color: currentColor, size: currentSize, start: false };
+                const data = { x: coords.x, y: coords.y, color: currentColor, size: currentSize, start: false };
                 ws.send(JSON.stringify({ type: "DRAW", payload: data }));
                 
-                ctx.lineTo(x, y);
+                ctx.lineTo(coords.x, coords.y);
                 ctx.stroke();
             }
 
@@ -429,32 +449,23 @@
                 drawing = false;
             }
 
-            function getTouchPos(canvasDom, touchEvent) {
-                const rect = canvasDom.getBoundingClientRect();
-                return {
-                    x: touchEvent.touches[0].clientX - rect.left,
-                    y: touchEvent.touches[0].clientY - rect.top
-                };
-            }
-
             canvas.addEventListener("mousedown", (e) => {
                 if (myTurn) {
-                    startDrawing(e.offsetX, e.offsetY);
+                    startDrawing(getEventCoordinates(e));
                 }
             });
             canvas.addEventListener("mouseup", stopDrawing);
             canvas.addEventListener("mouseout", stopDrawing);
             canvas.addEventListener("mousemove", (e) => {
                 if (myTurn) {
-                    draw(e.offsetX, e.offsetY);
+                    draw(getEventCoordinates(e));
                 }
             });
 
             canvas.addEventListener("touchstart", (e) => {
                 if (myTurn) {
                     e.preventDefault();
-                    const touchPos = getTouchPos(canvas, e);
-                    startDrawing(touchPos.x, touchPos.y);
+                    startDrawing(getEventCoordinates(e));
                 }
             }, { passive: false });
             canvas.addEventListener("touchend", stopDrawing);
@@ -462,8 +473,7 @@
             canvas.addEventListener("touchmove", (e) => {
                 if (myTurn) {
                     e.preventDefault();
-                    const touchPos = getTouchPos(canvas, e);
-                    draw(touchPos.x, touchPos.y);
+                    draw(getEventCoordinates(e));
                 }
             }, { passive: false });
 
