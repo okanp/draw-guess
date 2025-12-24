@@ -55,6 +55,25 @@ export class Room {
         }
     }
 
+    private normalizeTurkish(str: string): string {
+        if (this.language !== 'Turkish') {
+            return str;
+        }
+        return str
+            .replace(/ş/g, 's')
+            .replace(/ç/g, 'c')
+            .replace(/ğ/g, 'g')
+            .replace(/ü/g, 'u')
+            .replace(/ö/g, 'o')
+            .replace(/ı/g, 'i')
+            .replace(/Ş/g, 'S')
+            .replace(/Ç/g, 'C')
+            .replace(/Ğ/g, 'G')
+            .replace(/Ü/g, 'U')
+            .replace(/Ö/g, 'O')
+            .replace(/İ/g, 'I');
+    }
+
     addPlayer(ws: WebSocket, name: string, avatar: string): Player {
         const playerId = uuidv4();
         const isFirstPlayer = this.players.size === 0;
@@ -106,7 +125,7 @@ export class Room {
         if (player.reconnectionTimeout) clearTimeout(player.reconnectionTimeout);
         player.reconnectionTimeout = setTimeout(() => {
             this.removePlayer(playerId);
-        }, 60000);
+        }, 180000); // 180 seconds (3 minutes)
     }
 
     private removePlayer(playerId: string) {
@@ -179,7 +198,10 @@ export class Room {
             return;
         }
 
-        if (this.gameState === "playing" && this.currentWord && message.toLowerCase() === this.currentWord.toLowerCase()) {
+        const normalizedMessage = this.normalizeTurkish(message).toLowerCase();
+        const normalizedWord = this.normalizeTurkish(this.currentWord).toLowerCase();
+
+        if (this.gameState === "playing" && this.currentWord && normalizedMessage === normalizedWord) {
             const drawer = this.players.get(this.drawingPlayerId!);
             const activePlayersCount = this.getActivePlayers().length;
 

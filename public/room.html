@@ -404,30 +404,69 @@
                 window.location.href = "/index.html";
             });
 
+            function startDrawing(x, y) {
+                drawing = true;
+                const data = { x, y, color: currentColor, size: currentSize, start: true };
+                ws.send(JSON.stringify({ type: "DRAW", payload: data }));
+                
+                ctx.beginPath();
+                ctx.strokeStyle = currentColor;
+                ctx.lineWidth = currentSize;
+                ctx.lineCap = "round";
+                ctx.moveTo(x, y);
+            }
+
+            function draw(x, y) {
+                if (!drawing) return;
+                const data = { x, y, color: currentColor, size: currentSize, start: false };
+                ws.send(JSON.stringify({ type: "DRAW", payload: data }));
+                
+                ctx.lineTo(x, y);
+                ctx.stroke();
+            }
+
+            function stopDrawing() {
+                drawing = false;
+            }
+
+            function getTouchPos(canvasDom, touchEvent) {
+                const rect = canvasDom.getBoundingClientRect();
+                return {
+                    x: touchEvent.touches[0].clientX - rect.left,
+                    y: touchEvent.touches[0].clientY - rect.top
+                };
+            }
+
             canvas.addEventListener("mousedown", (e) => {
                 if (myTurn) {
-                    drawing = true;
-                    const data = { x: e.offsetX, y: e.offsetY, color: currentColor, size: currentSize, start: true };
-                    ws.send(JSON.stringify({ type: "DRAW", payload: data }));
-                    
-                    ctx.beginPath();
-                    ctx.strokeStyle = currentColor;
-                    ctx.lineWidth = currentSize;
-                    ctx.lineCap = "round";
-                    ctx.moveTo(e.offsetX, e.offsetY);
+                    startDrawing(e.offsetX, e.offsetY);
                 }
             });
-            canvas.addEventListener("mouseup", () => { if (myTurn) drawing = false; });
-            canvas.addEventListener("mouseout", () => { if (myTurn) drawing = false; });
+            canvas.addEventListener("mouseup", stopDrawing);
+            canvas.addEventListener("mouseout", stopDrawing);
             canvas.addEventListener("mousemove", (e) => {
-                if (myTurn && drawing) {
-                    const data = { x: e.offsetX, y: e.offsetY, color: currentColor, size: currentSize, start: false };
-                    ws.send(JSON.stringify({ type: "DRAW", payload: data }));
-                    
-                    ctx.lineTo(e.offsetX, e.offsetY);
-                    ctx.stroke();
+                if (myTurn) {
+                    draw(e.offsetX, e.offsetY);
                 }
             });
+
+            canvas.addEventListener("touchstart", (e) => {
+                if (myTurn) {
+                    e.preventDefault();
+                    const touchPos = getTouchPos(canvas, e);
+                    startDrawing(touchPos.x, touchPos.y);
+                }
+            }, { passive: false });
+            canvas.addEventListener("touchend", stopDrawing);
+            canvas.addEventListener("touchcancel", stopDrawing);
+            canvas.addEventListener("touchmove", (e) => {
+                if (myTurn) {
+                    e.preventDefault();
+                    const touchPos = getTouchPos(canvas, e);
+                    draw(touchPos.x, touchPos.y);
+                }
+            }, { passive: false });
+
             chatInput.addEventListener("keydown", (e) => {
                 if (e.key === "Enter" && chatInput.value) {
                     ws.send(JSON.stringify({ type: "CHAT", payload: chatInput.value }));
